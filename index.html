@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>选币与交易分析驾驶舱</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="top-strip">
+        <div class="brand-block">
+          <span class="brand-mark"></span>
+          <div>
+            <p class="eyebrow">实时选币</p>
+            <h1>币种分析驾驶舱</h1>
+          </div>
+        </div>
+        <div class="status-rail" aria-live="polite">
+          <span>刷新 <strong id="lastRefresh">--</strong></span>
+          <span>下次 <strong id="nextRefresh">--</strong></span>
+          <span>行情 <strong id="feedStatus">连接中</strong></span>
+          <span>候选 <strong id="candidateCount">0</strong></span>
+          <span>趋势 <strong id="marketTrend">--</strong></span>
+        </div>
+        <div class="header-actions">
+          <select id="providerSelect" aria-label="行情源">
+            <option value="binance">Binance</option>
+            <option value="okx">OKX</option>
+          </select>
+          <button id="refreshButton" type="button">刷新</button>
+        </div>
+      </header>
+
+      <main class="dashboard">
+        <section class="hero-grid">
+          <article class="signal-panel wide">
+            <div>
+              <p class="panel-kicker">交易指挥舱</p>
+              <h2 id="defenseTitle">等待行情数据</h2>
+              <p id="defenseText">正在读取公开市场数据。</p>
+            </div>
+            <div class="trend-orb" id="trendOrb">--</div>
+          </article>
+          <article class="signal-panel">
+            <p class="panel-kicker">当前策略</p>
+            <h2 id="strategyTitle">--</h2>
+            <p id="strategyText">--</p>
+          </article>
+          <article class="signal-panel">
+            <p class="panel-kicker">风险压力</p>
+            <strong class="risk-number" id="riskPressure">--</strong>
+            <div class="risk-meter" aria-hidden="true"><span id="riskMeter"></span></div>
+            <p id="riskHint">--</p>
+          </article>
+        </section>
+
+        <section class="workspace">
+          <aside class="left-column">
+            <section class="panel selected-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-kicker">首要观察标的</p>
+                  <h2 id="selectedSymbol">--</h2>
+                </div>
+                <span class="pill accent" id="selectedTag">--</span>
+              </div>
+              <p class="muted" id="selectedReason">等待候选池刷新。</p>
+              <div class="chip-grid" id="selectedChips"></div>
+              <div class="metric-grid compact" id="selectedMetrics"></div>
+            </section>
+
+            <section class="panel controls-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-kicker">筛选条件</p>
+                  <h2>候选池</h2>
+                </div>
+                <span class="muted small" id="universeCount">--</span>
+              </div>
+              <form class="symbol-jump" id="symbolJumpForm">
+                <label for="customSymbolInput">自定义查看币种</label>
+                <div class="jump-row">
+                  <input id="customSymbolInput" type="search" placeholder="BTC / ETHUSDT / sol-usdt" />
+                  <button type="submit">查看</button>
+                </div>
+                <p class="muted small" id="customSymbolHint">按 Binance USDT 现货标的查询。</p>
+              </form>
+              <label>
+                搜索
+                <input id="searchInput" type="search" placeholder="BTC / ETH / SOL" />
+              </label>
+              <label>
+                最小 24h 成交额
+                <select id="volumeFilter">
+                  <option value="0">不限</option>
+                  <option value="10000000">1000 万 USDT</option>
+                  <option value="50000000" selected>5000 万 USDT</option>
+                  <option value="100000000">1 亿 USDT</option>
+                  <option value="300000000">3 亿 USDT</option>
+                </select>
+              </label>
+              <label>
+                24h 涨跌
+                <select id="changeFilter">
+                  <option value="all">全部</option>
+                  <option value="positive" selected>只看上涨</option>
+                  <option value="hot">强势大于 5%</option>
+                  <option value="pullback">回撤观察</option>
+                </select>
+              </label>
+              <label>
+                风险上限
+                <input id="riskFilter" type="range" min="35" max="100" value="78" />
+                <span id="riskFilterLabel">78</span>
+              </label>
+              <label>
+                刷新频率
+                <select id="refreshInterval">
+                  <option value="30000">30 秒</option>
+                  <option value="60000" selected>60 秒</option>
+                  <option value="120000">2 分钟</option>
+                  <option value="300000">5 分钟</option>
+                </select>
+              </label>
+            </section>
+
+            <section class="panel queue-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-kicker">机会队列前十</p>
+                  <h2>实时筛选</h2>
+                </div>
+                <span class="muted small" id="queueTime">--</span>
+              </div>
+              <div id="opportunityQueue" class="queue-list"></div>
+            </section>
+          </aside>
+
+          <section class="main-column">
+            <section class="panel analysis-panel">
+              <div class="analysis-head">
+                <div>
+                  <p class="panel-kicker">操作下单板块</p>
+                  <h2 id="analysisTitle">标的交易驾驶舱</h2>
+                </div>
+                <div class="analysis-actions">
+                  <select id="marketSelect" aria-label="市场类型">
+                    <option value="spot">现货</option>
+                    <option value="perp">USDT 永续</option>
+                  </select>
+                  <select id="intervalSelect" aria-label="K 线周期">
+                    <option value="5m">5m</option>
+                    <option value="15m" selected>15m</option>
+                    <option value="30m">30m</option>
+                    <option value="1H">1H</option>
+                    <option value="4H">4H</option>
+                    <option value="1D">1D</option>
+                  </select>
+                  <span class="pill" id="analysisTag">--</span>
+                </div>
+              </div>
+
+              <div class="chart-wrap">
+                <canvas id="priceChart" width="1280" height="420"></canvas>
+              </div>
+
+              <div class="section-block">
+                <div class="block-title">
+                  <div>
+                    <h3>实盘交易结构</h3>
+                    <p>价格、区间和波动率合成的风控参考。</p>
+                  </div>
+                  <span class="pill accent" id="structureBadge">--</span>
+                </div>
+                <div class="metric-grid" id="structureMetrics"></div>
+              </div>
+
+              <div class="section-block">
+                <div class="block-title">
+                  <div>
+                    <h3>热度与事件确认</h3>
+                    <p>只保留对选币有用的热度和交易所确认。</p>
+                  </div>
+                  <span class="pill" id="heatBadge">--</span>
+                </div>
+                <div class="metric-grid" id="heatMetrics"></div>
+              </div>
+
+              <div class="section-block">
+                <div class="block-title">
+                  <div>
+                    <h3>执行模板</h3>
+                    <p id="executionText">--</p>
+                  </div>
+                </div>
+                <div class="execution-row">
+                  <div><span>入场触发</span><strong id="entryTrigger">--</strong></div>
+                  <div><span>保护位</span><strong id="protectTrigger">--</strong></div>
+                  <div><span>止盈区</span><strong id="profitTrigger">--</strong></div>
+                  <div><span>仓位建议</span><strong id="positionHint">--</strong></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel table-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-kicker">全市场排行</p>
+                  <h2>候选币列表</h2>
+                </div>
+                <span class="muted small" id="tableSummary">--</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th data-sort="rank">#</th>
+                      <th data-sort="symbol">币种</th>
+                      <th>市场</th>
+                      <th data-sort="price">现价</th>
+                      <th data-sort="change">24h</th>
+                      <th data-sort="change1h">1h</th>
+                      <th data-sort="quoteVolume">成交额</th>
+                      <th data-sort="openInterestChange">持仓量</th>
+                      <th data-sort="activeBuySellDiff">主动买卖差</th>
+                      <th data-sort="spotBuyPressure">现货买盘</th>
+                      <th data-sort="fundingRate">资金费率</th>
+                      <th data-sort="pumpRadarScore">拉盘雷达</th>
+                      <th data-sort="score">热度</th>
+                      <th data-sort="marketCap">流通市值</th>
+                      <th data-sort="fdv">FDV</th>
+                      <th data-sort="circulatingRatio">流通占比</th>
+                      <th>状态</th>
+                    </tr>
+                  </thead>
+                  <tbody id="coinTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
