@@ -101,6 +101,7 @@ const els = {};
 document.addEventListener("DOMContentLoaded", () => {
   bindElements();
   bindEvents();
+  bindPanelControls();
   hydrateControls();
   loadMarket();
   startCountdown();
@@ -140,6 +141,8 @@ function bindElements() {
     "universeCount",
     "queueTime",
     "opportunityQueue",
+    "trendSummary",
+    "trendBoard",
     "analysisTitle",
     "marketSelect",
     "intervalSelect",
@@ -205,6 +208,119 @@ function bindEvents() {
   });
   window.addEventListener("resize", () => renderChart(state.candles, state.selected));
   bindChartEvents();
+}
+
+function bindPanelControls() {
+  restorePanelLayout();
+
+  document.querySelectorAll(".panel").forEach((panel) => {
+    const id = getPanelId(panel);
+    panel.dataset.panelId = id;
+    const savedHeight = localStorage.getItem(`coinScreener.panelHeight.${id}`);
+    if (savedHeight) {
+      panel.style.height = savedHeight;
+      panel.classList.add("user-sized");
+    }
+
+    const handle = panel.querySelector(".panel-head, .analysis-head");
+    if (handle) {
+      handle.draggable = true;
+      handle.title = "拖拽调整位置";
+      handle.addEventListener("dragstart", (event) => {
+        panel.classList.add("dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", id);
+      });
+      handle.addEventListener("dragend", () => {
+        panel.classList.remove("dragging");
+        savePanelOrders();
+      });
+    }
+
+    const grip = document.createElement("div");
+    grip.className = "panel-resize-grip";
+    grip.title = "上下拖拽调整高度";
+    panel.appendChild(grip);
+    grip.addEventListener("pointerdown", (event) => startPanelResize(event, panel, id));
+  });
+
+  document.querySelectorAll(".left-column, .main-column").forEach((container) => {
+    container.addEventListener("dragover", (event) => {
+      const dragging = document.querySelector(".panel.dragging");
+      if (!dragging || dragging.parentElement !== container) return;
+      event.preventDefault();
+      const before = getPanelInsertBefore(container, event.clientX, event.clientY);
+      if (before) container.insertBefore(dragging, before);
+      else container.appendChild(dragging);
+    });
+    container.addEventListener("drop", savePanelOrders);
+  });
+}
+
+function getPanelId(panel) {
+  const known = ["selected", "controls", "queue", "trend", "analysis", "table"];
+  const found = known.find((name) => panel.classList.contains(`${name}-panel`));
+  return found || panel.querySelector("h2")?.textContent?.trim() || "panel";
+}
+
+function getPanelInsertBefore(container, x, y) {
+  return [...container.querySelectorAll(":scope > .panel:not(.dragging)")].find((child) => {
+    const rect = child.getBoundingClientRect();
+    const inRow = y >= rect.top && y <= rect.bottom;
+    if (inRow) return x < rect.left + rect.width / 2;
+    return y < rect.top + rect.height / 2;
+  });
+}
+
+function savePanelOrders() {
+  document.querySelectorAll(".left-column, .main-column").forEach((container) => {
+    const key = container.classList.contains("left-column") ? "top" : "main";
+    const order = [...container.querySelectorAll(":scope > .panel")].map((panel) => panel.dataset.panelId);
+    localStorage.setItem(`coinScreener.panelOrder.${key}`, JSON.stringify(order));
+  });
+}
+
+function restorePanelLayout() {
+  [
+    ["top", document.querySelector(".left-column")],
+    ["main", document.querySelector(".main-column")],
+  ].forEach(([key, container]) => {
+    if (!container) return;
+    const raw = localStorage.getItem(`coinScreener.panelOrder.${key}`);
+    if (!raw) return;
+    try {
+      const order = JSON.parse(raw);
+      order.forEach((id) => {
+        const panel = [...container.querySelectorAll(":scope > .panel")].find((item) => getPanelId(item) === id);
+        if (panel) container.appendChild(panel);
+      });
+    } catch (error) {
+      localStorage.removeItem(`coinScreener.panelOrder.${key}`);
+    }
+  });
+}
+
+function startPanelResize(event, panel, id) {
+  event.preventDefault();
+  event.stopPropagation();
+  const startY = event.clientY;
+  const startHeight = panel.offsetHeight;
+  panel.classList.add("resizing", "user-sized");
+
+  const move = (moveEvent) => {
+    const nextHeight = clamp(startHeight + moveEvent.clientY - startY, 150, window.innerHeight * 1.5);
+    panel.style.height = `${Math.round(nextHeight)}px`;
+    if (panel.classList.contains("analysis-panel")) renderChart(state.candles, state.selected);
+  };
+  const stop = () => {
+    panel.classList.remove("resizing");
+    localStorage.setItem(`coinScreener.panelHeight.${id}`, panel.style.height);
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+  };
+
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", stop, { once: true });
 }
 
 function hydrateControls() {
@@ -844,6 +960,7 @@ function applyFilters() {
 
   renderSelected();
   renderQueue();
+  renderTrendBoard();
   renderTable();
   updateMarketHeader();
 }
@@ -907,24 +1024,14 @@ function renderSelected() {
     .join("");
   els.selectedMetrics.innerHTML = [
     metric("现价", formatPrice(item.price)),
-    metric("24h 高点", formatPrice(item.high)),
-    metric("24h 低点", formatPrice(item.low)),
-    metric("24h 涨跌幅", formatPct(item.change)),
-    metric("最近1h涨跌幅", formatPct(item.change1h)),
+    metric("1h", formatPct(item.change1h)),
+    metric("24h", formatPct(item.change)),
     metric("拉盘雷达", `${formatNumber(item.pumpRadarScore, 1)} / ${item.pumpRadarLabel}`),
     metric("量能突增", formatVolumeSurge(item.volumeSurge)),
-    metric("突破结构", formatBreakoutScore(item.breakoutScore)),
     metric("持仓量变化", formatOpenInterestChange(item.openInterestChange)),
     metric("主动买卖差", formatActiveDiff(item.activeBuySellDiff)),
-    metric("现货主动买入", formatSpotBuyPressure(item.spotBuyPressure)),
-    metric("大单现货买入", formatLargeBuy(item)),
     metric("资金费率", formatFundingRate(item.fundingRate)),
-    metric("代币总量", formatSupply(item.totalSupply)),
-    metric("流通总量", formatSupply(item.circulatingSupply)),
-    metric("流通占比", formatPct(item.circulatingRatio)),
     metric("流通市值", formatMoney(item.marketCap)),
-    metric("FDV", formatMoney(item.fdv)),
-    metric("风险", `${formatNumber(item.risk, 0)}%`),
   ].join("");
 }
 
@@ -955,11 +1062,46 @@ function renderQueue() {
   });
 }
 
+function renderTrendBoard() {
+  const rows = [...state.tickers]
+    .map((item) => ({
+      ...item,
+      trendScore: getTrendScore(item),
+    }))
+    .sort((a, b) => b.trendScore - a.trendScore)
+    .slice(0, 12);
+
+  els.trendSummary.textContent = `${rows.length} 个`;
+  if (!rows.length) {
+    els.trendBoard.innerHTML = `<div class="empty-state">等待行情刷新</div>`;
+    return;
+  }
+
+  els.trendBoard.innerHTML = rows
+    .map(
+      (item, index) => `
+        <button class="trend-item ${state.selected?.symbol === item.symbol ? "active" : ""}" data-symbol="${item.symbol}" type="button">
+          <span class="trend-rank">${index + 1}</span>
+          <span class="trend-main">
+            <strong>${displaySymbol(item)}</strong>
+            <span>1h ${formatPct(item.change1h)} / 24h ${formatPct(item.change)} / 量 ${formatVolumeSurge(item.volumeSurge)}</span>
+          </span>
+          <span class="trend-score">${formatNumber(item.trendScore, 0)}</span>
+        </button>
+      `
+    )
+    .join("");
+
+  els.trendBoard.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => selectSymbol(button.dataset.symbol));
+  });
+}
+
 function renderTable() {
   const rows = [...state.filtered].sort(sortRows);
   els.tableSummary.textContent = `${rows.length} 个候选 / 按 ${state.sortKey} ${state.sortDir === "asc" ? "升序" : "降序"}`;
   if (!rows.length) {
-    els.coinTable.innerHTML = `<tr><td colspan="17" class="empty-state">没有符合条件的结果</td></tr>`;
+    els.coinTable.innerHTML = `<tr><td colspan="16" class="empty-state">没有符合条件的结果</td></tr>`;
     return;
   }
 
@@ -969,7 +1111,6 @@ function renderTable() {
         <tr class="${state.selected?.symbol === item.symbol ? "active" : ""}" data-symbol="${item.symbol}">
           <td>${index + 1}</td>
           <td>${displaySymbol(item)}</td>
-          <td>${item.source}</td>
           <td>${formatPrice(item.price)}</td>
           <td class="${item.change >= 0 ? "positive" : "negative"}">${formatPct(item.change)}</td>
           <td class="${getSignedClass(item.change1h)}">${formatPct(item.change1h)}</td>
@@ -1002,6 +1143,18 @@ function sortRows(a, b) {
   return ((a[key] || 0) - (b[key] || 0)) * dir;
 }
 
+function getTrendScore(item) {
+  const change1h = Number.isFinite(item.change1h) ? item.change1h : 0;
+  const change24h = Number.isFinite(item.change) ? item.change : 0;
+  const volumeSurge = Number.isFinite(item.volumeSurge) ? item.volumeSurge : 1;
+  const activeDiff = Number.isFinite(item.activeBuySellDiff) ? item.activeBuySellDiff : 0;
+  return clamp(
+    45 + change1h * 7 + change24h * 1.2 + Math.max(0, volumeSurge - 1) * 10 + activeDiff * 0.18,
+    0,
+    99
+  );
+}
+
 function selectSymbol(symbol) {
   const found = state.tickers.find((item) => item.symbol === symbol);
   if (!found) return;
@@ -1010,6 +1163,7 @@ function selectSymbol(symbol) {
   els.customSymbolInput.value = displaySymbol(found);
   renderSelected();
   renderQueue();
+  renderTrendBoard();
   renderTable();
   loadCandlesForSelected();
 }

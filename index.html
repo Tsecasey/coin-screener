@@ -135,6 +135,17 @@
               </div>
               <div id="opportunityQueue" class="queue-list"></div>
             </section>
+
+            <section class="panel trend-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-kicker">趋势榜</p>
+                  <h2>短线动量</h2>
+                </div>
+                <span class="muted small" id="trendSummary">--</span>
+              </div>
+              <div id="trendBoard" class="trend-list"></div>
+            </section>
           </aside>
 
           <section class="main-column">
@@ -203,41 +214,40 @@
               </div>
             </section>
 
-            <section class="panel table-panel">
-              <div class="panel-head">
-                <div>
-                  <p class="panel-kicker">全市场排行</p>
-                  <h2>候选币列表</h2>
+              <section class="panel table-panel">
+                <div class="panel-head">
+                  <div>
+                    <p class="panel-kicker">全市场排行</p>
+                    <h2>候选币列表</h2>
+                  </div>
+                  <span class="muted small" id="tableSummary">--</span>
                 </div>
-                <span class="muted small" id="tableSummary">--</span>
-              </div>
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th data-sort="rank">#</th>
-                      <th data-sort="symbol">币种</th>
-                      <th>市场</th>
-                      <th data-sort="price">现价</th>
-                      <th data-sort="change">24h</th>
-                      <th data-sort="change1h">1h</th>
-                      <th data-sort="quoteVolume">成交额</th>
-                      <th data-sort="openInterestChange">持仓量</th>
-                      <th data-sort="activeBuySellDiff">主动买卖差</th>
-                      <th data-sort="spotBuyPressure">现货买盘</th>
-                      <th data-sort="fundingRate">资金费率</th>
-                      <th data-sort="pumpRadarScore">拉盘雷达</th>
-                      <th data-sort="score">热度</th>
-                      <th data-sort="marketCap">流通市值</th>
-                      <th data-sort="fdv">FDV</th>
-                      <th data-sort="circulatingRatio">流通占比</th>
-                      <th>状态</th>
-                    </tr>
-                  </thead>
-                  <tbody id="coinTable"></tbody>
-                </table>
-              </div>
-            </section>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th data-sort="rank">#</th>
+                        <th data-sort="symbol">币种</th>
+                        <th data-sort="price">现价</th>
+                        <th data-sort="change">24h</th>
+                        <th data-sort="change1h">1h</th>
+                        <th data-sort="quoteVolume">成交额</th>
+                        <th data-sort="openInterestChange">持仓量</th>
+                        <th data-sort="activeBuySellDiff">主动买卖差</th>
+                        <th data-sort="spotBuyPressure">现货买盘</th>
+                        <th data-sort="fundingRate">资金费率</th>
+                        <th data-sort="pumpRadarScore">拉盘雷达</th>
+                        <th data-sort="score">热度</th>
+                        <th data-sort="marketCap">流通市值</th>
+                        <th data-sort="fdv">FDV</th>
+                        <th data-sort="circulatingRatio">流通占比</th>
+                        <th>状态</th>
+                      </tr>
+                    </thead>
+                    <tbody id="coinTable"></tbody>
+                  </table>
+                </div>
+              </section>
           </section>
         </section>
       </main>

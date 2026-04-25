@@ -30,6 +30,7 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
+  font-size: 13px;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     "PingFang SC", "Microsoft YaHei", sans-serif;
   color: var(--text);
@@ -79,9 +80,9 @@ input:focus {
 }
 
 .app-shell {
-  width: min(1880px, calc(100% - 32px));
+  width: min(1920px, calc(100% - 20px));
   margin: 0 auto;
-  padding: 14px 0 28px;
+  padding: 10px 0 22px;
 }
 
 .top-strip {
@@ -90,10 +91,10 @@ input:focus {
   z-index: 5;
   display: grid;
   grid-template-columns: minmax(260px, 0.8fr) minmax(420px, 1.6fr) auto;
-  gap: 14px;
+  gap: 10px;
   align-items: center;
-  min-height: 64px;
-  padding: 10px 14px;
+  min-height: 54px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(8, 13, 23, 0.86);
@@ -109,8 +110,8 @@ input:focus {
 }
 
 .brand-mark {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   background:
     linear-gradient(135deg, rgba(101, 230, 209, 0.96), rgba(255, 209, 102, 0.9)),
@@ -124,7 +125,7 @@ input:focus {
 }
 
 .brand-block h1 {
-  font-size: clamp(18px, 2.2vw, 26px);
+  font-size: clamp(17px, 1.8vw, 23px);
   line-height: 1.1;
 }
 
@@ -132,19 +133,19 @@ input:focus {
 .panel-kicker {
   margin: 0;
   color: var(--cyan);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
 }
 
 .status-rail {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
   justify-content: center;
   overflow-x: auto;
   white-space: nowrap;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .status-rail strong {
@@ -159,14 +160,14 @@ input:focus {
 
 .dashboard {
   display: grid;
-  gap: 16px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .hero-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr 0.9fr;
-  gap: 16px;
+  gap: 10px;
 }
 
 .signal-panel,
@@ -178,14 +179,14 @@ input:focus {
 }
 
 .signal-panel {
-  min-height: 168px;
-  padding: 26px;
+  min-height: 120px;
+  padding: 16px;
 }
 
 .signal-panel.wide {
   display: grid;
-  grid-template-columns: 1fr 180px;
-  gap: 22px;
+  grid-template-columns: 1fr 118px;
+  gap: 14px;
   align-items: center;
   background:
     linear-gradient(100deg, rgba(101, 230, 209, 0.1), transparent 42%),
@@ -194,13 +195,13 @@ input:focus {
 
 .signal-panel h2,
 .panel h2 {
-  margin: 12px 0 0;
-  font-size: clamp(22px, 3vw, 34px);
+  margin: 6px 0 0;
+  font-size: clamp(18px, 2vw, 25px);
   line-height: 1.15;
 }
 
 .signal-panel p:not(.panel-kicker) {
-  margin: 14px 0 0;
+  margin: 8px 0 0;
   color: var(--muted);
   line-height: 1.55;
 }
@@ -208,13 +209,13 @@ input:focus {
 .trend-orb {
   display: grid;
   place-items: center;
-  width: 160px;
+  width: 108px;
   aspect-ratio: 1;
   margin-left: auto;
   border: 1px solid rgba(255, 122, 136, 0.38);
   border-radius: 50%;
   color: var(--text);
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 900;
   background:
     radial-gradient(circle, rgba(101, 230, 209, 0.22), transparent 58%),
@@ -223,14 +224,14 @@ input:focus {
 
 .risk-number {
   display: block;
-  margin-top: 28px;
+  margin-top: 16px;
   color: var(--red);
-  font-size: 34px;
+  font-size: 28px;
 }
 
 .risk-meter {
   height: 10px;
-  margin-top: 24px;
+  margin-top: 14px;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
@@ -247,28 +248,74 @@ input:focus {
 
 .workspace {
   display: grid;
-  grid-template-columns: 490px 1fr;
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 10px;
   align-items: start;
 }
 
 .left-column,
 .main-column {
   display: grid;
-  gap: 16px;
+  gap: 10px;
+}
+
+.left-column {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr) minmax(320px, 0.95fr) minmax(300px, 0.9fr);
+  align-items: start;
 }
 
 .panel {
-  padding: 22px;
+  position: relative;
+  padding: 14px;
+  min-height: 120px;
+}
+
+.panel.user-sized {
+  overflow: auto;
 }
 
 .panel-head,
 .analysis-head,
 .block-title {
   display: flex;
-  gap: 16px;
+  gap: 10px;
   align-items: start;
   justify-content: space-between;
+}
+
+.panel-head,
+.analysis-head {
+  cursor: grab;
+  user-select: none;
+}
+
+.panel.dragging {
+  opacity: 0.58;
+  outline: 1px dashed var(--cyan);
+}
+
+.panel-resize-grip {
+  position: absolute;
+  right: 10px;
+  bottom: 4px;
+  left: 10px;
+  height: 9px;
+  cursor: ns-resize;
+  opacity: 0.35;
+}
+
+.panel-resize-grip::before {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 3px;
+  margin: 3px auto 0;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.panel.resizing {
+  outline: 1px solid var(--line-strong);
 }
 
 .panel-head h2,
@@ -280,8 +327,8 @@ input:focus {
 
 .panel-head h2,
 .analysis-head h2 {
-  margin-top: 8px;
-  font-size: 24px;
+  margin-top: 4px;
+  font-size: 18px;
 }
 
 .muted {
@@ -290,15 +337,15 @@ input:focus {
 }
 
 .small {
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .pill {
   display: inline-grid;
   place-items: center;
-  min-width: 72px;
-  min-height: 34px;
-  padding: 0 12px;
+  min-width: 62px;
+  min-height: 28px;
+  padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--soft);
@@ -316,13 +363,13 @@ input:focus {
 .chip-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 18px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .chip-grid span {
-  min-height: 34px;
-  padding: 8px 12px;
+  min-height: 28px;
+  padding: 6px 9px;
   border-radius: 8px;
   color: var(--soft);
   background: rgba(255, 255, 255, 0.06);
@@ -342,7 +389,7 @@ input:focus {
 
 .metric {
   min-height: 62px;
-  padding: 10px 12px;
+  padding: 9px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(24, 34, 49, 0.8);
@@ -358,19 +405,19 @@ input:focus {
   display: block;
   margin-top: 6px;
   color: var(--text);
-  font-size: 17px;
+  font-size: 16px;
   word-break: break-word;
 }
 
 .controls-panel {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .symbol-jump {
   display: grid;
-  gap: 8px;
-  padding: 14px;
+  gap: 6px;
+  padding: 10px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: rgba(101, 230, 209, 0.07);
@@ -378,7 +425,7 @@ input:focus {
 
 .symbol-jump label {
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 850;
 }
 
@@ -395,9 +442,9 @@ input:focus {
 
 .controls-panel label {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   color: var(--soft);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 750;
 }
 
@@ -410,18 +457,18 @@ input[type="range"] {
 
 .queue-list {
   display: grid;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 7px;
+  margin-top: 10px;
 }
 
 .queue-item {
   display: grid;
-  grid-template-columns: 42px 1fr auto;
-  gap: 12px;
+  grid-template-columns: 34px 1fr auto;
+  gap: 9px;
   align-items: center;
   width: 100%;
-  min-height: 78px;
-  padding: 12px;
+  min-height: 58px;
+  padding: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   color: inherit;
@@ -437,7 +484,7 @@ input[type="range"] {
 .queue-rank {
   display: grid;
   place-items: center;
-  width: 36px;
+  width: 30px;
   aspect-ratio: 1;
   border-radius: 8px;
   color: var(--amber);
@@ -451,20 +498,20 @@ input[type="range"] {
 }
 
 .queue-title span {
-  margin-top: 4px;
+  margin-top: 3px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .score-badge {
-  min-width: 58px;
+  min-width: 42px;
   color: var(--cyan);
   font-weight: 900;
   text-align: right;
 }
 
 .analysis-panel {
-  min-height: 760px;
+  min-height: 0;
 }
 
 .analysis-actions {
@@ -479,8 +526,8 @@ input[type="range"] {
 
 .chart-wrap {
   width: 100%;
-  height: clamp(260px, 34vw, 420px);
-  margin-top: 20px;
+  height: clamp(260px, 30vw, 390px);
+  margin-top: 12px;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -512,7 +559,7 @@ canvas {
 }
 
 .block-title h3 {
-  font-size: 19px;
+  font-size: 16px;
 }
 
 .block-title p {
@@ -523,13 +570,13 @@ canvas {
 .execution-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 16px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .execution-row div {
-  min-height: 76px;
-  padding: 14px;
+  min-height: 60px;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(24, 34, 49, 0.78);
@@ -542,17 +589,63 @@ canvas {
 
 .execution-row span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .execution-row strong {
-  margin-top: 8px;
-  font-size: 19px;
+  margin-top: 5px;
+  font-size: 16px;
+}
+
+.trend-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.trend-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 48px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: inherit;
+  background: rgba(24, 34, 49, 0.72);
+  text-align: left;
+}
+
+.trend-item.active {
+  border-color: var(--line-strong);
+  background: rgba(33, 65, 74, 0.45);
+}
+
+.trend-rank {
+  color: var(--amber);
+  font-weight: 900;
+}
+
+.trend-main strong,
+.trend-main span {
+  display: block;
+}
+
+.trend-main span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.trend-score {
+  color: var(--cyan);
+  font-weight: 900;
 }
 
 .table-wrap {
-  max-height: 560px;
-  margin-top: 16px;
+  max-height: 520px;
+  margin-top: 10px;
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -560,14 +653,14 @@ canvas {
 
 table {
   width: 100%;
-  min-width: 1500px;
+  min-width: 1400px;
   border-collapse: collapse;
   background: rgba(11, 16, 24, 0.82);
 }
 
 th,
 td {
-  padding: 11px 12px;
+  padding: 9px 10px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   white-space: nowrap;
@@ -579,7 +672,7 @@ th {
   z-index: 1;
   color: var(--muted);
   background: #0d1420;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -615,7 +708,7 @@ tbody tr.active {
   text-align: center;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1080px) {
   .top-strip,
   .hero-grid,
   .workspace {
@@ -634,7 +727,8 @@ tbody tr.active {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .queue-panel {
+  .queue-panel,
+  .trend-panel {
     grid-column: 1 / -1;
   }
 
