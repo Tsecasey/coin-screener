@@ -71,6 +71,19 @@ const STABLE_BASES = new Set([
   "BRL",
 ]);
 
+const PANEL_DEFAULT_ORDER = ["selected", "queue", "trend", "fundflow", "controls", "analysis", "position", "table"];
+const PANEL_DEFAULT_SPANS = {
+  selected: 3,
+  queue: 3,
+  trend: 3,
+  fundflow: 3,
+  controls: 12,
+  analysis: 12,
+  position: 6,
+  table: 6,
+};
+const LAYOUT_VERSION = "grid-workspace-v4";
+
 const state = {
   provider: localStorage.getItem("coinScreener.provider") || "binance",
   marketType: localStorage.getItem("coinScreener.marketType") || "spot",
@@ -82,6 +95,7 @@ const state = {
   candles: [],
   sortKey: "pumpRadarScore",
   sortDir: "desc",
+  positions: loadPositions(),
   timer: null,
   countTimer: null,
   nextAt: 0,
@@ -143,6 +157,8 @@ function bindElements() {
     "opportunityQueue",
     "trendSummary",
     "trendBoard",
+    "fundFlowSummary",
+    "fundFlowBoard",
     "analysisTitle",
     "marketSelect",
     "intervalSelect",
@@ -157,6 +173,12 @@ function bindElements() {
     "protectTrigger",
     "profitTrigger",
     "positionHint",
+    "positionForm",
+    "positionSymbolInput",
+    "positionSideInput",
+    "positionEntryInput",
+    "positionSummary",
+    "positionBoard",
     "tableSummary",
     "coinTable",
   ].forEach((id) => {
@@ -191,6 +213,7 @@ function bindEvents() {
     event.preventDefault();
     jumpToCustomSymbol();
   });
+  els.positionForm.addEventListener("submit", addPosition);
   ["searchInput", "volumeFilter", "changeFilter", "riskFilter"].forEach((id) => {
     els[id].addEventListener("input", applyFilters);
   });
@@ -211,15 +234,24 @@ function bindEvents() {
 }
 
 function bindPanelControls() {
-  restorePanelLayout();
+  migrateLayoutStorage();
+  const grid = normalizeLayoutGrid();
+  restorePanelLayout(grid);
 
-  document.querySelectorAll(".panel").forEach((panel) => {
+  grid.querySelectorAll(":scope > .panel").forEach((panel) => {
     const id = getPanelId(panel);
     panel.dataset.panelId = id;
     const savedHeight = localStorage.getItem(`coinScreener.panelHeight.${id}`);
     if (savedHeight) {
       panel.style.height = savedHeight;
       panel.classList.add("user-sized");
+    }
+    const savedSpan = Number(localStorage.getItem(`coinScreener.panelSpan.${id}`));
+    if (Number.isFinite(savedSpan) && savedSpan > 0) {
+      setPanelSpan(panel, savedSpan);
+      panel.classList.add("user-sized");
+    } else {
+      setPanelSpan(panel, PANEL_DEFAULT_SPANS[id] || 3);
     }
 
     const handle = panel.querySelector(".panel-head, .analysis-head");
@@ -233,6 +265,8 @@ function bindPanelControls() {
       });
       handle.addEventListener("dragend", () => {
         panel.classList.remove("dragging");
+        document.querySelectorAll(".layout-drop-target").forEach((item) => item.classList.remove("layout-drop-target"));
+        fitPanelToContainer(panel);
         savePanelOrders();
       });
     }
@@ -241,24 +275,56 @@ function bindPanelControls() {
     grip.className = "panel-resize-grip";
     grip.title = "上下拖拽调整高度";
     panel.appendChild(grip);
-    grip.addEventListener("pointerdown", (event) => startPanelResize(event, panel, id));
+    grip.addEventListener("pointerdown", (event) => startPanelResize(event, panel, id, "height"));
+
+    const cornerGrip = document.createElement("div");
+    cornerGrip.className = "panel-corner-resize-grip";
+    cornerGrip.title = "拖拽角落调整宽高";
+    panel.appendChild(cornerGrip);
+    cornerGrip.addEventListener("pointerdown", (event) => startPanelResize(event, panel, id, "both"));
   });
 
-  document.querySelectorAll(".left-column, .main-column").forEach((container) => {
-    container.addEventListener("dragover", (event) => {
-      const dragging = document.querySelector(".panel.dragging");
-      if (!dragging || dragging.parentElement !== container) return;
-      event.preventDefault();
-      const before = getPanelInsertBefore(container, event.clientX, event.clientY);
-      if (before) container.insertBefore(dragging, before);
-      else container.appendChild(dragging);
-    });
-    container.addEventListener("drop", savePanelOrders);
+  grid.addEventListener("dragover", (event) => {
+    const dragging = document.querySelector(".panel.dragging");
+    if (!dragging) return;
+    event.preventDefault();
+    grid.classList.add("layout-drop-target");
+    const before = getPanelInsertBefore(grid, event.clientX, event.clientY);
+    if (before) grid.insertBefore(dragging, before);
+    else grid.appendChild(dragging);
+    fitPanelToContainer(dragging);
+  });
+  grid.addEventListener("dragleave", (event) => {
+    if (!grid.contains(event.relatedTarget)) grid.classList.remove("layout-drop-target");
+  });
+  grid.addEventListener("drop", () => {
+    grid.classList.remove("layout-drop-target");
+    savePanelOrders();
   });
 }
 
+function migrateLayoutStorage() {
+  if (localStorage.getItem("coinScreener.layoutVersion") === LAYOUT_VERSION) return;
+  localStorage.removeItem("coinScreener.panelOrder.top");
+  localStorage.removeItem("coinScreener.panelOrder.main");
+  localStorage.removeItem("coinScreener.panelOrder.grid");
+  PANEL_DEFAULT_ORDER.forEach((id) => {
+    localStorage.removeItem(`coinScreener.panelSpan.${id}`);
+    localStorage.removeItem(`coinScreener.panelHeight.${id}`);
+  });
+  localStorage.setItem("coinScreener.layoutVersion", LAYOUT_VERSION);
+}
+
+function normalizeLayoutGrid() {
+  const grid = document.querySelector(".workspace");
+  const panels = [...document.querySelectorAll(".workspace > .panel, .left-column > .panel, .main-column > .panel")];
+  panels.forEach((panel) => grid.appendChild(panel));
+  document.querySelectorAll(".left-column, .main-column").forEach((shell) => shell.remove());
+  return grid;
+}
+
 function getPanelId(panel) {
-  const known = ["selected", "controls", "queue", "trend", "analysis", "table"];
+  const known = ["selected", "controls", "queue", "trend", "fundflow", "analysis", "position", "table"];
   const found = known.find((name) => panel.classList.contains(`${name}-panel`));
   return found || panel.querySelector("h2")?.textContent?.trim() || "panel";
 }
@@ -272,49 +338,91 @@ function getPanelInsertBefore(container, x, y) {
   });
 }
 
-function savePanelOrders() {
-  document.querySelectorAll(".left-column, .main-column").forEach((container) => {
-    const key = container.classList.contains("left-column") ? "top" : "main";
-    const order = [...container.querySelectorAll(":scope > .panel")].map((panel) => panel.dataset.panelId);
-    localStorage.setItem(`coinScreener.panelOrder.${key}`, JSON.stringify(order));
-  });
+function getLayoutColumnCount(container) {
+  if (!container) return 1;
+  const count = Number(getComputedStyle(container).getPropertyValue("--layout-columns"));
+  return Number.isFinite(count) && count > 0 ? count : 1;
 }
 
-function restorePanelLayout() {
-  [
-    ["top", document.querySelector(".left-column")],
-    ["main", document.querySelector(".main-column")],
-  ].forEach(([key, container]) => {
-    if (!container) return;
-    const raw = localStorage.getItem(`coinScreener.panelOrder.${key}`);
-    if (!raw) return;
+function getPanelSpan(panel) {
+  const match = String(panel.style.gridColumn || "").match(/span\s+(\d+)/);
+  if (match) return Number(match[1]);
+  return PANEL_DEFAULT_SPANS[getPanelId(panel)] || 3;
+}
+
+function setPanelSpan(panel, span) {
+  const max = getLayoutColumnCount(panel.parentElement);
+  const next = clamp(Math.round(span), 1, max);
+  panel.style.gridColumn = `span ${next}`;
+}
+
+function fitPanelToContainer(panel) {
+  setPanelSpan(panel, getPanelSpan(panel));
+}
+
+function savePanelOrders() {
+  const grid = document.querySelector(".workspace");
+  const order = [...grid.querySelectorAll(":scope > .panel")].map((panel) => panel.dataset.panelId);
+  localStorage.setItem("coinScreener.panelOrder.grid", JSON.stringify(order));
+}
+
+function restorePanelLayout(grid) {
+  const panels = [...grid.querySelectorAll(":scope > .panel")];
+  const restoredIds = new Set();
+  let order = PANEL_DEFAULT_ORDER;
+  const raw = localStorage.getItem("coinScreener.panelOrder.grid");
+
+  if (raw) {
     try {
-      const order = JSON.parse(raw);
-      order.forEach((id) => {
-        const panel = [...container.querySelectorAll(":scope > .panel")].find((item) => getPanelId(item) === id);
-        if (panel) container.appendChild(panel);
-      });
+      order = JSON.parse(raw);
     } catch (error) {
-      localStorage.removeItem(`coinScreener.panelOrder.${key}`);
+      localStorage.removeItem("coinScreener.panelOrder.grid");
+    }
+  }
+
+  order.forEach((id) => {
+    const panel = panels.find((item) => getPanelId(item) === id);
+    if (panel) {
+      grid.appendChild(panel);
+      restoredIds.add(id);
     }
   });
+
+  panels
+    .filter((panel) => !restoredIds.has(getPanelId(panel)))
+    .forEach((panel) => grid.appendChild(panel));
 }
 
-function startPanelResize(event, panel, id) {
+function startPanelResize(event, panel, id, mode = "height") {
   event.preventDefault();
   event.stopPropagation();
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  const container = panel.parentElement;
+  const columnCount = getLayoutColumnCount(container);
   const startY = event.clientY;
+  const startX = event.clientX;
   const startHeight = panel.offsetHeight;
+  const startWidth = panel.offsetWidth;
   panel.classList.add("resizing", "user-sized");
 
   const move = (moveEvent) => {
-    const nextHeight = clamp(startHeight + moveEvent.clientY - startY, 150, window.innerHeight * 1.5);
-    panel.style.height = `${Math.round(nextHeight)}px`;
+    if (mode === "height" || mode === "both") {
+      const nextHeight = clamp(startHeight + moveEvent.clientY - startY, 150, window.innerHeight * 1.5);
+      panel.style.height = `${Math.round(nextHeight)}px`;
+    }
+    if (mode === "both" && container) {
+      const gap = Number.parseFloat(getComputedStyle(container).gap) || 0;
+      const columnWidth = Math.max(1, (container.clientWidth - gap * (columnCount - 1)) / columnCount);
+      const nextWidth = clamp(startWidth + moveEvent.clientX - startX, columnWidth, container.clientWidth);
+      const nextSpan = clamp(Math.round((nextWidth + gap) / (columnWidth + gap)), 1, columnCount);
+      setPanelSpan(panel, nextSpan);
+    }
     if (panel.classList.contains("analysis-panel")) renderChart(state.candles, state.selected);
   };
   const stop = () => {
     panel.classList.remove("resizing");
     localStorage.setItem(`coinScreener.panelHeight.${id}`, panel.style.height);
+    localStorage.setItem(`coinScreener.panelSpan.${id}`, String(getPanelSpan(panel)));
     window.removeEventListener("pointermove", move);
     window.removeEventListener("pointerup", stop);
   };
@@ -961,6 +1069,8 @@ function applyFilters() {
   renderSelected();
   renderQueue();
   renderTrendBoard();
+  renderFundFlowBoard();
+  renderPositionBoard();
   renderTable();
   updateMarketHeader();
 }
@@ -1097,6 +1207,46 @@ function renderTrendBoard() {
   });
 }
 
+function renderFundFlowBoard() {
+  const rows = [...state.tickers]
+    .map((item) => ({
+      ...item,
+      fundFlowScore: getFundFlowScore(item),
+      estimatedInflow1h: getEstimatedInflow1h(item),
+    }))
+    .filter((item) => item.estimatedInflow1h > 0 || item.fundFlowScore > 55)
+    .sort((a, b) => b.fundFlowScore - a.fundFlowScore)
+    .slice(0, 12);
+
+  els.fundFlowSummary.textContent = rows.length ? `${rows.length} 个 / 估算` : "--";
+  if (!rows.length) {
+    els.fundFlowBoard.innerHTML = `<div class="empty-state">等待资金异动</div>`;
+    return;
+  }
+
+  els.fundFlowBoard.innerHTML = rows
+    .map(
+      (item, index) => `
+        <button class="fundflow-item ${state.selected?.symbol === item.symbol ? "active" : ""}" data-symbol="${item.symbol}" type="button">
+          <span class="fundflow-rank">${index + 1}</span>
+          <span class="fundflow-main">
+            <strong>${displaySymbol(item)}</strong>
+            <span>1h ${formatPct(item.change1h)} / 主动买卖差 ${formatActiveDiff(item.activeBuySellDiff)}</span>
+          </span>
+          <span class="fundflow-value">
+            <strong>${formatMoney(item.estimatedInflow1h)}</strong>
+            <em>${formatNumber(item.fundFlowScore, 0)}</em>
+          </span>
+        </button>
+      `
+    )
+    .join("");
+
+  els.fundFlowBoard.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => selectSymbol(button.dataset.symbol));
+  });
+}
+
 function renderTable() {
   const rows = [...state.filtered].sort(sortRows);
   els.tableSummary.textContent = `${rows.length} 个候选 / 按 ${state.sortKey} ${state.sortDir === "asc" ? "升序" : "降序"}`;
@@ -1112,8 +1262,8 @@ function renderTable() {
           <td>${index + 1}</td>
           <td>${displaySymbol(item)}</td>
           <td>${formatPrice(item.price)}</td>
-          <td class="${item.change >= 0 ? "positive" : "negative"}">${formatPct(item.change)}</td>
           <td class="${getSignedClass(item.change1h)}">${formatPct(item.change1h)}</td>
+          <td class="${item.change >= 0 ? "positive" : "negative"}">${formatPct(item.change)}</td>
           <td>${formatMoney(item.quoteVolume)}</td>
           <td class="${getSignedClass(item.openInterestChange)}">${formatOpenInterestChange(item.openInterestChange)}</td>
           <td class="${getSignedClass(item.activeBuySellDiff)}">${formatActiveDiff(item.activeBuySellDiff)}</td>
@@ -1155,6 +1305,34 @@ function getTrendScore(item) {
   );
 }
 
+function getFundFlowScore(item) {
+  const change1h = Number.isFinite(item.change1h) ? item.change1h : 0;
+  const activeDiff = Number.isFinite(item.activeBuySellDiff) ? item.activeBuySellDiff : 0;
+  const spotBuy = Number.isFinite(item.spotBuyPressure) ? item.spotBuyPressure : 50;
+  const volumeSurge = Number.isFinite(item.volumeSurge) ? item.volumeSurge : 1;
+  const oneHourTurnover = getEstimatedOneHourTurnover(item);
+  const liquidityKick = oneHourTurnover > 0 ? clamp(Math.log10(oneHourTurnover) * 5 - 22, 0, 18) : 0;
+  return clamp(
+    35 + change1h * 8 + activeDiff * 0.36 + (spotBuy - 50) * 0.9 + Math.max(0, volumeSurge - 1) * 9 + liquidityKick,
+    0,
+    99
+  );
+}
+
+function getEstimatedOneHourTurnover(item) {
+  const volumeSurge = Number.isFinite(item.volumeSurge) ? clamp(item.volumeSurge, 0.35, 5) : 1;
+  return Math.max(0, (item.quoteVolume || 0) / 24) * volumeSurge;
+}
+
+function getEstimatedInflow1h(item) {
+  const activeDiff = Number.isFinite(item.activeBuySellDiff) ? item.activeBuySellDiff : 0;
+  const spotBuy = Number.isFinite(item.spotBuyPressure) ? item.spotBuyPressure : 50;
+  const change1h = Number.isFinite(item.change1h) ? item.change1h : 0;
+  const turnover = getEstimatedOneHourTurnover(item);
+  const buyBias = clamp(0.5 + activeDiff / 220 + (spotBuy - 50) / 170 + Math.max(0, change1h) / 120, 0.05, 0.95);
+  return Math.max(0, turnover * (buyBias - 0.5) * 2);
+}
+
 function selectSymbol(symbol) {
   const found = state.tickers.find((item) => item.symbol === symbol);
   if (!found) return;
@@ -1164,6 +1342,8 @@ function selectSymbol(symbol) {
   renderSelected();
   renderQueue();
   renderTrendBoard();
+  renderFundFlowBoard();
+  renderPositionBoard();
   renderTable();
   loadCandlesForSelected();
 }
@@ -1189,6 +1369,193 @@ function normalizeCustomSymbol(raw) {
   const text = raw.trim().toUpperCase().replace(/[\s_/-]/g, "");
   if (!text) return "";
   return text.endsWith("USDT") ? text : `${text}USDT`;
+}
+
+function loadPositions() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("coinScreener.positions") || "[]");
+    return Array.isArray(saved) ? saved.filter((item) => item?.symbol && item?.side && Number.isFinite(item.entryPrice)) : [];
+  } catch (error) {
+    localStorage.removeItem("coinScreener.positions");
+    return [];
+  }
+}
+
+function savePositions() {
+  localStorage.setItem("coinScreener.positions", JSON.stringify(state.positions));
+}
+
+function addPosition(event) {
+  event.preventDefault();
+  const symbol = normalizeCustomSymbol(els.positionSymbolInput.value);
+  const side = els.positionSideInput.value === "short" ? "short" : "long";
+  const item = state.tickers.find((row) => row.symbol === symbol);
+  const typedEntry = Number(els.positionEntryInput.value);
+  const entryPrice = Number.isFinite(typedEntry) && typedEntry > 0 ? typedEntry : item?.price;
+
+  if (!symbol) {
+    els.positionSummary.textContent = "请输入币种";
+    return;
+  }
+  if (!item) {
+    els.positionSummary.textContent = `未找到 ${displaySymbol(symbol)}`;
+    return;
+  }
+  if (!Number.isFinite(entryPrice) || entryPrice <= 0) {
+    els.positionSummary.textContent = "开仓价无效";
+    return;
+  }
+
+  const existing = state.positions.find((position) => position.symbol === symbol && position.side === side);
+  if (existing) {
+    existing.entryPrice = entryPrice;
+    existing.updatedAt = Date.now();
+  } else {
+    state.positions.unshift({
+      id: `${symbol}-${side}-${Date.now()}`,
+      symbol,
+      side,
+      entryPrice,
+      createdAt: Date.now(),
+    });
+  }
+
+  savePositions();
+  els.positionSymbolInput.value = "";
+  els.positionEntryInput.value = "";
+  renderPositionBoard();
+}
+
+function removePosition(id) {
+  state.positions = state.positions.filter((position) => position.id !== id);
+  savePositions();
+  renderPositionBoard();
+}
+
+function renderPositionBoard() {
+  if (!els.positionBoard) return;
+  const matched = state.positions
+    .map((position) => ({
+      position,
+      item: state.tickers.find((row) => row.symbol === position.symbol),
+    }))
+    .filter((row) => row.item);
+
+  els.positionSummary.textContent = state.positions.length ? `${matched.length}/${state.positions.length} 个在线` : "未添加";
+  if (!state.positions.length) {
+    els.positionBoard.innerHTML = `<div class="empty-state">添加已开仓币种后，这里会实时跟踪浮盈亏和离场压力。</div>`;
+    return;
+  }
+
+  els.positionBoard.innerHTML = state.positions
+    .map((position) => {
+      const item = state.tickers.find((row) => row.symbol === position.symbol);
+      if (!item) {
+        return `
+          <article class="position-item stale">
+            <div class="position-main">
+              <strong>${displaySymbol(position.symbol)}</strong>
+              <span>${position.side === "long" ? "做多" : "做空"} / 开仓 ${formatPrice(position.entryPrice)}</span>
+            </div>
+            <div class="position-offline">当前市场没有该标的行情</div>
+            <button class="ghost-button" type="button" data-remove-position="${position.id}">移除</button>
+          </article>
+        `;
+      }
+
+      const signal = calculateExitSignal(position, item);
+      return `
+        <article class="position-item ${signal.className}">
+          <button class="position-main position-symbol-button" type="button" data-position-symbol="${item.symbol}">
+            <strong>${displaySymbol(item)}</strong>
+            <span>${position.side === "long" ? "做多" : "做空"} / 开仓 ${formatPrice(position.entryPrice)}</span>
+          </button>
+          <div class="position-stat">
+            <span>现价</span>
+            <strong>${formatPrice(item.price)}</strong>
+          </div>
+          <div class="position-stat">
+            <span>浮盈亏</span>
+            <strong class="${getSignedClass(signal.pnlPct)}">${formatPct(signal.pnlPct)}</strong>
+          </div>
+          <div class="position-stat">
+            <span>1h / 24h</span>
+            <strong>${formatPct(item.change1h)} / ${formatPct(item.change)}</strong>
+          </div>
+          <div class="position-signal">
+            <span>离场压力</span>
+            <strong>${formatNumber(signal.score, 0)}</strong>
+            <em>${signal.label}</em>
+          </div>
+          <button class="ghost-button" type="button" data-remove-position="${position.id}">移除</button>
+          <div class="position-tags">
+            ${signal.reasons.map((reason) => `<span class="${reason.className}">${reason.text}</span>`).join("")}
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  els.positionBoard.querySelectorAll("[data-remove-position]").forEach((button) => {
+    button.addEventListener("click", () => removePosition(button.dataset.removePosition));
+  });
+  els.positionBoard.querySelectorAll("[data-position-symbol]").forEach((button) => {
+    button.addEventListener("click", () => selectSymbol(button.dataset.positionSymbol));
+  });
+}
+
+function calculateExitSignal(position, item) {
+  const side = position.side === "short" ? -1 : 1;
+  const pnlPct = ((item.price - position.entryPrice) / position.entryPrice) * 100 * side;
+  const oneHourPressure = -side * (Number.isFinite(item.change1h) ? item.change1h : 0);
+  const activePressure = -side * (Number.isFinite(item.activeBuySellDiff) ? item.activeBuySellDiff : 0);
+  const fundingPct = Number.isFinite(item.fundingRate) ? item.fundingRate * 100 : 0;
+  const fundingPressure = side * fundingPct;
+  const spotBuy = Number.isFinite(item.spotBuyPressure) ? item.spotBuyPressure : 50;
+  const spotPressure = position.side === "short" ? spotBuy - 52 : 50 - spotBuy;
+  const oiChange = Number.isFinite(item.openInterestChange) ? item.openInterestChange : 0;
+  const volumeSurge = Number.isFinite(item.volumeSurge) ? item.volumeSurge : 1;
+  const pumpRadar = Number.isFinite(item.pumpRadarScore) ? item.pumpRadarScore : 50;
+  const reasons = [];
+  let score = 18;
+
+  const addReason = (condition, weight, text, className = "neutral") => {
+    if (!condition) return;
+    score += weight;
+    reasons.push({ text, className });
+  };
+
+  addReason(oneHourPressure > 0.4, clamp(oneHourPressure * 6, 4, 18), `1h 逆向 ${formatPct(item.change1h)}`, "negative");
+  addReason(activePressure > 1, clamp(activePressure * 0.55, 4, 18), `主动买卖差转弱 ${formatActiveDiff(item.activeBuySellDiff)}`, "negative");
+  addReason(spotPressure > 3, clamp(spotPressure * 0.8, 3, 14), `现货买盘转弱 ${formatSpotBuyPressure(item.spotBuyPressure)}`, "negative");
+  addReason(pnlPct > 4 && volumeSurge < 0.85, 9, `量能降温 ${formatVolumeSurge(item.volumeSurge)}`, "neutral");
+  addReason(pnlPct > 3 && pumpRadar < 45, 10, `拉盘雷达回落 ${formatNumber(pumpRadar, 0)}`, "neutral");
+  addReason(pnlPct > 6 && item.risk > 70, clamp((item.risk - 65) * 0.6, 4, 14), `风险升高 ${formatNumber(item.risk, 0)}%`, "negative");
+  addReason(fundingPressure > 0.035, clamp(fundingPressure * 180, 4, 18), `资金拥挤 ${formatFundingRate(item.fundingRate)}`, "negative");
+  addReason(pnlPct > 2 && side * item.change > 3 && oiChange < -1.5, 10, `上涨减仓 ${formatOpenInterestChange(oiChange)}`, "negative");
+  addReason(pnlPct < -3 && oneHourPressure > 0, 14, `亏损且短线走弱 ${formatPct(pnlPct)}`, "negative");
+
+  if (!reasons.length) {
+    reasons.push({ text: "暂未触发离场信号", className: "positive" });
+    score = Math.max(8, score - 8);
+  }
+
+  score = clamp(score, 0, 99);
+  const label = getExitSignalLabel(score, pnlPct);
+  return {
+    pnlPct,
+    score,
+    label,
+    className: score >= 72 ? "danger" : score >= 52 ? "warning" : "healthy",
+    reasons: reasons.slice(0, 6),
+  };
+}
+
+function getExitSignalLabel(score, pnlPct) {
+  if (score >= 78) return pnlPct >= 0 ? "止盈离场" : "风险离场";
+  if (score >= 62) return "减仓保护";
+  if (score >= 42) return "上移保护";
+  return "继续持有";
 }
 
 function renderAnalysis(item, candles) {

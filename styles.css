@@ -247,25 +247,27 @@ input:focus {
 }
 
 .workspace {
+  --layout-columns: 12;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: dense;
   gap: 10px;
   align-items: start;
 }
 
 .left-column,
 .main-column {
-  display: grid;
-  gap: 10px;
+  display: contents;
 }
 
-.left-column {
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr) minmax(320px, 0.95fr) minmax(300px, 0.9fr);
-  align-items: start;
+.workspace.layout-drop-target {
+  outline: 1px dashed rgba(101, 230, 209, 0.35);
+  outline-offset: 4px;
 }
 
 .panel {
   position: relative;
+  grid-column: span 3;
   padding: 14px;
   min-height: 120px;
 }
@@ -289,6 +291,11 @@ input:focus {
   user-select: none;
 }
 
+.panel.dragging .panel-head,
+.panel.dragging .analysis-head {
+  cursor: grabbing;
+}
+
 .panel.dragging {
   opacity: 0.58;
   outline: 1px dashed var(--cyan);
@@ -296,7 +303,7 @@ input:focus {
 
 .panel-resize-grip {
   position: absolute;
-  right: 10px;
+  right: 28px;
   bottom: 4px;
   left: 10px;
   height: 9px;
@@ -312,6 +319,35 @@ input:focus {
   margin: 3px auto 0;
   border-radius: 999px;
   background: var(--muted);
+}
+
+.panel-corner-resize-grip {
+  position: absolute;
+  right: 7px;
+  bottom: 5px;
+  width: 16px;
+  height: 16px;
+  border-right: 2px solid rgba(147, 161, 178, 0.75);
+  border-bottom: 2px solid rgba(147, 161, 178, 0.75);
+  cursor: nwse-resize;
+  opacity: 0.72;
+}
+
+.panel-corner-resize-grip::before,
+.panel-corner-resize-grip::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  bottom: 5px;
+  width: 8px;
+  border-bottom: 1px solid rgba(147, 161, 178, 0.58);
+  transform: rotate(135deg);
+}
+
+.panel-corner-resize-grip::after {
+  right: 5px;
+  bottom: 2px;
+  width: 5px;
 }
 
 .panel.resizing {
@@ -597,13 +633,137 @@ canvas {
   font-size: 16px;
 }
 
-.trend-list {
+.position-form {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) 92px 130px 72px;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.position-form button,
+.ghost-button {
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.position-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.position-item {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) repeat(3, minmax(110px, 0.7fr)) minmax(98px, 0.55fr) 68px;
+  gap: 8px;
+  align-items: stretch;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(12, 18, 28, 0.78);
+}
+
+.position-item.healthy {
+  border-color: rgba(101, 230, 209, 0.22);
+}
+
+.position-item.warning {
+  border-color: rgba(255, 209, 102, 0.42);
+}
+
+.position-item.danger {
+  border-color: rgba(255, 122, 136, 0.5);
+  background: rgba(40, 20, 28, 0.45);
+}
+
+.position-main,
+.position-stat,
+.position-signal,
+.position-offline {
+  min-height: 56px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(24, 34, 49, 0.72);
+}
+
+.position-symbol-button {
+  color: inherit;
+  text-align: left;
+  background: rgba(12, 28, 35, 0.74);
+}
+
+.position-main strong,
+.position-main span,
+.position-stat span,
+.position-stat strong,
+.position-signal span,
+.position-signal strong,
+.position-signal em {
+  display: block;
+}
+
+.position-main span,
+.position-stat span,
+.position-signal span,
+.position-signal em,
+.position-offline {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.position-stat strong,
+.position-signal strong {
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.position-signal strong {
+  color: var(--amber);
+}
+
+.ghost-button {
+  color: var(--soft);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+}
+
+.position-tags {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.position-tags span {
+  padding: 5px 8px;
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.position-tags span.positive {
+  color: var(--green);
+  background: rgba(60, 220, 151, 0.1);
+}
+
+.position-tags span.negative {
+  color: var(--red);
+  background: rgba(255, 122, 136, 0.1);
+}
+
+.trend-list,
+.fundflow-list {
   display: grid;
   gap: 7px;
   margin-top: 10px;
 }
 
-.trend-item {
+.trend-item,
+.fundflow-item {
   display: grid;
   grid-template-columns: 28px 1fr auto;
   gap: 8px;
@@ -617,30 +777,46 @@ canvas {
   text-align: left;
 }
 
-.trend-item.active {
+.trend-item.active,
+.fundflow-item.active {
   border-color: var(--line-strong);
   background: rgba(33, 65, 74, 0.45);
 }
 
-.trend-rank {
+.trend-rank,
+.fundflow-rank {
   color: var(--amber);
   font-weight: 900;
 }
 
 .trend-main strong,
-.trend-main span {
+.trend-main span,
+.fundflow-main strong,
+.fundflow-main span,
+.fundflow-value strong,
+.fundflow-value em {
   display: block;
 }
 
-.trend-main span {
+.trend-main span,
+.fundflow-main span {
   margin-top: 2px;
   color: var(--muted);
   font-size: 12px;
 }
 
-.trend-score {
+.trend-score,
+.fundflow-value {
   color: var(--cyan);
   font-weight: 900;
+  text-align: right;
+}
+
+.fundflow-value em {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
 }
 
 .table-wrap {
@@ -712,6 +888,7 @@ tbody tr.active {
   .top-strip,
   .hero-grid,
   .workspace {
+    --layout-columns: 6;
     grid-template-columns: 1fr;
   }
 
@@ -723,17 +900,22 @@ tbody tr.active {
     grid-template-columns: minmax(0, 1fr) 120px;
   }
 
-  .left-column {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .workspace {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .queue-panel,
-  .trend-panel {
+  .trend-panel,
+  .fundflow-panel {
     grid-column: 1 / -1;
   }
 
   .analysis-panel .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .position-item {
+    grid-template-columns: minmax(150px, 1fr) repeat(2, minmax(110px, 0.8fr));
   }
 }
 
@@ -745,10 +927,20 @@ tbody tr.active {
 
   .top-strip,
   .signal-panel.wide,
-  .left-column,
+  .workspace,
   .metric-grid,
-  .execution-row {
+  .execution-row,
+  .position-form,
+  .position-item {
     grid-template-columns: 1fr;
+  }
+
+  .workspace {
+    --layout-columns: 1;
+  }
+
+  .panel {
+    grid-column: 1 / -1 !important;
   }
 
   .signal-panel,

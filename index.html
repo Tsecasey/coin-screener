@@ -146,6 +146,17 @@
               </div>
               <div id="trendBoard" class="trend-list"></div>
             </section>
+
+            <section class="panel fundflow-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-kicker">1小时资金流入榜</p>
+                  <h2>资金异动</h2>
+                </div>
+                <span class="muted small" id="fundFlowSummary">--</span>
+              </div>
+              <div id="fundFlowBoard" class="fundflow-list"></div>
+            </section>
           </aside>
 
           <section class="main-column">
@@ -214,6 +225,26 @@
               </div>
             </section>
 
+            <section class="panel position-panel">
+              <div class="panel-head">
+                <div>
+                  <p class="panel-kicker">开仓跟踪看板</p>
+                  <h2>持仓离场判断</h2>
+                </div>
+                <span class="muted small" id="positionSummary">--</span>
+              </div>
+              <form class="position-form" id="positionForm">
+                <input id="positionSymbolInput" type="search" placeholder="BTC / ETH / SOL" aria-label="持仓币种" />
+                <select id="positionSideInput" aria-label="持仓方向">
+                  <option value="long">做多</option>
+                  <option value="short">做空</option>
+                </select>
+                <input id="positionEntryInput" type="number" step="any" min="0" placeholder="开仓价" aria-label="开仓价" />
+                <button type="submit">添加</button>
+              </form>
+              <div id="positionBoard" class="position-list"></div>
+            </section>
+
               <section class="panel table-panel">
                 <div class="panel-head">
                   <div>
@@ -229,8 +260,8 @@
                         <th data-sort="rank">#</th>
                         <th data-sort="symbol">币种</th>
                         <th data-sort="price">现价</th>
-                        <th data-sort="change">24h</th>
                         <th data-sort="change1h">1h</th>
+                        <th data-sort="change">24h</th>
                         <th data-sort="quoteVolume">成交额</th>
                         <th data-sort="openInterestChange">持仓量</th>
                         <th data-sort="activeBuySellDiff">主动买卖差</th>
